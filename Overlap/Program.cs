@@ -1,5 +1,7 @@
 ﻿using Newtonsoft.Json;
+using System;
 using System.IO;
+using System.Threading;
 
 namespace Overlap
 {
@@ -75,42 +77,103 @@ namespace Overlap
             if (!Directory.Exists(path[1]))
                 Directory.CreateDirectory(path[1]);
 
+            var extPath = Path.GetDirectoryName(e.FullPath).Replace(path[0], "");
+            if (extPath.StartsWith("\\"))
+                extPath = extPath.Remove(0, 1);
+
+            var realPath = Path.Combine(path[1], extPath, e.Name);
+            var lastPath = Path.Combine(path[1], extPath, e.OldName);
+
+            #endregion
+
+            if (File.Exists(lastPath))
+            {
+                File.Delete(lastPath);
+                Log.GetInstance().Write("FileLog", "Rename", "Rename", $@"del {lastPath}");
+            }
+
+            CopyFile(e.FullPath, realPath, "Rename");
+        }
+
+        private static void Watcher_Deleted(object sender, FileSystemEventArgs e)
+        {
+            #region 通用处理
+
+            if (!CheckExtName(e))
+                return;
+
+            var path = GetTargetPath(e);
+            if (path == null)
+                return;
+
+            if (!Directory.Exists(path[1]))
+                Directory.CreateDirectory(path[1]);
 
             var extPath = Path.GetDirectoryName(e.FullPath).Replace(path[0], "");
             if (extPath.StartsWith("\\"))
                 extPath = extPath.Remove(0, 1);
 
+            var realPath = Path.Combine(path[1], extPath, e.Name);
+
             #endregion
-        }
 
-        private static void Watcher_Deleted(object sender, FileSystemEventArgs e)
-        {
-            if (!CheckExtName(e))
-                return;
-
-            var target = GetTargetPath(e);
-            if (target == null)
-                return;
+            if (File.Exists(realPath))
+            {
+                File.Delete(realPath);
+                Log.GetInstance().Write("FileLog", "Delete", "Delete", $@"del {realPath}");
+            }
         }
 
         private static void Watcher_Created(object sender, FileSystemEventArgs e)
         {
+            #region 通用处理
+
             if (!CheckExtName(e))
                 return;
 
-            var target = GetTargetPath(e);
-            if (target == null)
+            var path = GetTargetPath(e);
+            if (path == null)
                 return;
+
+            if (!Directory.Exists(path[1]))
+                Directory.CreateDirectory(path[1]);
+
+            var extPath = Path.GetDirectoryName(e.FullPath).Replace(path[0], "");
+            if (extPath.StartsWith("\\"))
+                extPath = extPath.Remove(0, 1);
+
+            var realPath = Path.Combine(path[1], extPath, e.Name);
+
+            #endregion
+
+            Thread.Sleep(5000);
+
+            CopyFile(e.FullPath, realPath, "Create");
         }
 
         private static void Watcher_Changed(object sender, FileSystemEventArgs e)
         {
+            #region 通用处理
+
             if (!CheckExtName(e))
                 return;
 
-            var target = GetTargetPath(e);
-            if (target == null)
+            var path = GetTargetPath(e);
+            if (path == null)
                 return;
+
+            if (!Directory.Exists(path[1]))
+                Directory.CreateDirectory(path[1]);
+
+            var extPath = Path.GetDirectoryName(e.FullPath).Replace(path[0], "");
+            if (extPath.StartsWith("\\"))
+                extPath = extPath.Remove(0, 1);
+
+            var realPath = Path.Combine(path[1], extPath, e.Name);
+
+            #endregion
+
+            CopyFile(e.FullPath, realPath, "Change");
         }
 
         /// <summary>
@@ -151,6 +214,37 @@ namespace Overlap
             }
 
             return path;
+        }
+
+        /// <summary>
+        /// 复制文件 \ Copy files
+        /// </summary>
+        /// <param name="from">来源</param>
+        /// <param name="to">目标</param>
+        private static void CopyFile(string from, string to, string events)
+        {
+            try
+            {
+                if (File.Exists(to))
+                    File.Delete(to);
+
+                var fromFile = new FileStream(from, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                var toFile = new FileStream(to, FileMode.OpenOrCreate);
+
+                var buffer = new byte[fromFile.Length];
+                fromFile.Read(buffer, 0, buffer.Length);
+                toFile.Write(buffer, 0, buffer.Length);
+
+                fromFile.Close();
+                toFile.Flush();
+                toFile.Close();
+
+                Log.GetInstance().Write("FileLog", "CopyFile", events, $@"{from} => {to}");
+            }
+            catch (Exception ex)
+            {
+                Log.GetInstance().Write("FileLog", "ERROR", events, $@"{ex.Message}");
+            }
         }
     }
 }
