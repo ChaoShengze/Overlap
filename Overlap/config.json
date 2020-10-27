@@ -1,5 +1,6 @@
 {
   "Folder": [ "D:\\TEMP" ],
   "Target": [ "D:\\Ext" ],
-  "Filter": [ ".tmp" ]
+  "Filter": [ ".tmp" ],
+  "WorkMode": 10
 }

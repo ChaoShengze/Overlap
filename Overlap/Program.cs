@@ -38,7 +38,7 @@ namespace Overlap
             Config = JsonConvert.DeserializeObject<IConfig>(File.ReadAllText(ConfigFileName));
 
             if (Config.Folder.Length != Config.Target.Length)
-                throw new System.Exception("监视路径必须和目标路径一一对应 \\ Number of target folders should be same as source folder");
+                throw new Exception("监视路径必须和目标路径一一对应 \\ Number of target folders should be same as source folder");
         }
 
         /// <summary>
@@ -47,19 +47,36 @@ namespace Overlap
         /// </summary>
         private static void StartWatchingThreads()
         {
-            foreach (var folder in Config.Folder)
+            if (Config.WorkMode == 0)
             {
-                FileSystemWatcher watcher = new FileSystemWatcher();
-                watcher.Path = folder;
-                watcher.Filter = "*.*";
+                foreach (var folder in Config.Folder)
+                {
+                    FileSystemWatcher watcher = new FileSystemWatcher();
+                    watcher.Path = folder;
+                    watcher.Filter = "*.*";
 
-                watcher.Changed += Watcher_Changed;
-                watcher.Created += Watcher_Created;
-                watcher.Deleted += Watcher_Deleted;
-                watcher.Renamed += Watcher_Renamed;
+                    watcher.Changed += Watcher_Changed;
+                    watcher.Created += Watcher_Created;
+                    watcher.Deleted += Watcher_Deleted;
+                    watcher.Renamed += Watcher_Renamed;
 
-                watcher.IncludeSubdirectories = true;
-                watcher.EnableRaisingEvents = true;
+                    watcher.IncludeSubdirectories = true;
+                    watcher.EnableRaisingEvents = true;
+                }
+            }
+            else
+            {
+                Thread thread = new Thread(() =>
+                {
+                    while (true)
+                    {
+                        Wathcer_Passivity();
+                        Thread.Sleep(Config.WorkMode * 60 * 1000);
+                    }
+                });
+                thread.IsBackground = true;
+                thread.Name = "OverlapWatcher";
+                thread.Start();
             }
         }
 
@@ -174,6 +191,11 @@ namespace Overlap
             #endregion
 
             CopyFile(e.FullPath, realPath, "Change");
+        }
+
+        private static void Wathcer_Passivity()
+        { 
+        
         }
 
         /// <summary>

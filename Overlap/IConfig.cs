@@ -25,5 +25,9 @@ namespace Overlap
         /// File types to ignore
         /// </summary>
         public string[] Filter;
+        /// <summary>
+        /// 工作模式，0为主动模式，其余值为被动模式的间隔时间（分钟） \ WorkMode, 0 for initiative mode, other for interval(min) of passivity mode.
+        /// </summary>
+        public int WorkMode;
     }
 }
